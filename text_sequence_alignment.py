@@ -1,12 +1,16 @@
+import sys, os, getopt
+import string
 import numpy
 import re
 from difflib import SequenceMatcher
 import swalign
+import textwrap
 
 '''
 for the swalign stuff, had to make some changes to the file to fix syntax
 like changing xrange to range and including print things in ()
 '''
+
 
 def aligned_rec_filtering(original,rec):
     y=rec.split()
@@ -16,7 +20,7 @@ def aligned_rec_filtering(original,rec):
         lengths.append(x)
     for i in range(len(y)):
         if y[i] not in original:
-            
+
             if y[i][0] is '-':
                 regex=re.compile('^-+')
                 y[i]=regex.sub('',y[i])
@@ -25,7 +29,7 @@ def aligned_rec_filtering(original,rec):
                 regex=re.compile('-+$')
                 y[i]=regex.sub('',y[i])
                 y[i]=y[i].ljust(lengths[i])
-            
+
             regex=re.compile('-*')
             y[i]=regex.sub('', y[i])
             y[i]=y[i].ljust(lengths[i])
@@ -53,7 +57,7 @@ def aligned_act_filtering(original, act):
             y[i]=regex.sub('', y[i])
             y[i]=y[i].ljust(lengths[i])
     return list_to_string(y)
-    
+
 
 def list_to_string(string_list):
     s=''
@@ -90,84 +94,64 @@ def wer(r, h): #r and h are lists
 
     return d[len(r)][len(h)]
 
-def print_alignment(str1,str2):
+def print_alignment(str1,str2, out, width=100):
     l1=len(str1)
     l2=len(str2)
-    i=0
-    while i<min(l1-150,l2-150):
-        print(str1[i:i+150])
-        print(str2[i:i+150])
-        print('')
-        i+=150
-    print(str1[i:])
-    print(str2[i:])
-    
 
-def get_alignment_WER(recognized,actual): #recognized and act are strings
-    r=recognized.split()
-    for i in range(len(r)):
-        if '-' in r[i]:
-            r[i]=re.compile('.+\-').sub('',r[i])
-    recognized=list_to_string(r)
-    #print(actual)
-    #print(recognized)
-    match = 3
-    mismatch = -1
-    scoring = swalign.NucleotideScoringMatrix(match, mismatch)
-    sw = swalign.LocalAlignment(scoring,-1.5,-.4)  # you can also choose gap penalties, etc...
-    #can play around with values of match, mismatch, and the gaps parameters in localalignment
-    alignment=sw.align(recognized,actual)
-    x=alignment.match() #x[0] act x[1] rec
-   
-    #print_alignment(x[0],x[1])
-    
-##    bb=x[1].split()
-##    aa=x[0].split()
-##               
-##    w=wer(x[1],x[0])
-##    print('ERRORS: ',w)
-##    print('total words: ',len(x[0].split()))
-##    print('WER: ', w/len(x[0].split()))
-    print('****************************************************************')
+    i = 0
+    while i < min(l1,l2):
+        line1 = str1[i:min(i+width,l1)]
+        line2 = str2[i:min(i+width,l2)]
 
-    a=aligned_act_filtering(actual, x[0])
-    b=aligned_rec_filtering(recognized,x[1])
-    print_alignment(a,b)
-    bb=b.split()
-    aa=a.split()           
-    x=wer(bb,aa)
-    print('total words: ',len(aa))
-    print('ERRORS: ',x)
-    print('WER: ', x/len(aa))
-    return(len(aa),x,x/len(aa))
-    
-    
-'-------------------------------------------------------------------------'
+        i += width
 
-def remove_grnd_punctuation(filename): #groundtruth file name
-    reg123=['\'','\"','\.*','\,','\?','\!','\-$']
-    reg_list=[]
-    for r in reg123:
-        reg_list.append(re.compile(r))
-    with open(filename) as file:
-        paragraphs=file.readlines()
-        filtered=[]
-        for p in paragraphs:
-            fil=p
-            for regex in reg_list:
-                fil=regex.sub('', fil)
-            regex=re.compile('\- ')
-            fil=regex.sub(' ',fil)
-            filtered.append(fil)
-        s=''
-        for f in filtered:
-            f = f.lstrip().rstrip().rstrip('\n')
-            if f == '':
-                continue
-            s+=f+' '
-        return s.lower().lstrip().rstrip()
+        if min(i,l1-1,l2-1) is not i:
+            break
 
-    
+        while str1[i] is not ' ' or str2[i] is not ' ':
+            line1 += str1[i]
+            line2 += str2[i]
+            i += 1
+            if min(i,l1-1,l2-1) is not i:
+                break
+
+        out.write(line1+'\n')
+        out.write(line2+'\n\n')
+
+
+
+def print_alignment_withSymbol(str1,str2, symbol, out, width=100):
+
+    reg = [' ','-']
+
+    l1=len(str1)
+    l2=len(str2)
+    l3=len(symbol)
+
+    i = 0
+    while i < min(l1,l2):
+        line1 = str1[i:min(i+width,l1)]
+        line2 = symbol[i:min(i+width,l3)]
+        line3 = str2[i:min(i+width,l2)]
+
+        i += width
+
+        if min(i,l1-1,l2-1) is not i:
+            break
+
+        while str1[i] not in reg or str2[i] not in reg:
+            line1 += str1[i]
+            line2 += symbol[i]
+            line3 += str2[i]
+            i += 1
+            if min(i,l1-1,l2-1) is not i:
+                break
+
+        out.write(line1+'\n')
+        out.write(line2+'\n')
+        out.write(line3+'\n\n')
+
+
 def remove_ref_punctuation(lines_list,grnd): #lines_list is list of transcript file lines
     reg123=['\'','\"','\.*','\,','\?','\!']
     reg_list=[]
@@ -185,7 +169,7 @@ def remove_ref_punctuation(lines_list,grnd): #lines_list is list of transcript f
     prev=''
     count=0
     for i in range(len(filtered)):
-        
+
         f = filtered[i].lstrip().rstrip().rstrip('\n')
         if f == '':
             continue
@@ -264,7 +248,7 @@ def remove_ref_punctuation(lines_list,grnd): #lines_list is list of transcript f
     return s.lower().lstrip().rstrip()
 
 '----------------------------------------------------------------------'
-
+'''
 names=[]
 grnd_names=[]
 with open('filename.txt') as f:
@@ -305,4 +289,112 @@ for i in range(len(names)):
     error_sum+=x[2]
     file.write(s)
 file.close()
-print('average WER: ',error_sum/65) 
+print('average WER: ',error_sum/65)
+'''
+
+def trim_query_lines(dir, query_lines, align_parser):
+    # create result and directory
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    for i in range(len(query_lines)-1):
+        alignment = align_parser.align(query_lines[i],query_lines[i+1])
+        alignment.dump()
+
+
+
+
+def main(argv):
+
+    query_dir = ''     # text to be aligned (e.g., result from speech api)
+    ref_dir = ''     # text to be aligned against (e.g., hand transcription)
+    result_dir = 'result/'
+
+    # punctuation
+    regex = re.compile('[%s]' % re.escape(string.punctuation))
+
+    match = 3
+    mismatch = -1
+    scoring = swalign.NucleotideScoringMatrix(match, mismatch)
+    sw = swalign.LocalAlignment(scoring,-1.5,-.4)   # you can also choose gap penalties, etc...
+                                                    # can play around with values of match, mismatch, and the gaps parameters in localalignment
+
+    try:
+        opts, args = getopt.getopt(argv,"hq:r:",["queryDir=","refDir="])
+    except getopt.GetoptError:
+        print 'text_alignment.py -q <query_dir> -r <ref_dir>'
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print 'text_alignment.py -q <query_dir> -r <ref_dir>'
+            sys.exit()
+        elif opt in ("-q", "--queryDir"):
+            query_dir = arg
+        elif opt in ("-r", "--refDir"):
+            ref_dir = arg
+
+    print 'Query Directory is ', query_dir
+    print 'Reference Directory is ', ref_dir
+
+    # create result and directory
+    if not os.path.exists(result_dir):
+        os.makedirs(result_dir)
+
+    #
+    for root, subdirs, files in os.walk(query_dir):
+
+        for filename in files:
+
+            if filename.endswith('txt'):
+                query_file_path = os.path.join(root, filename)
+                print query_file_path
+                ref_file_path = os.path.join(ref_dir, filename.replace('transcript','groundtruth'))
+                print ref_file_path
+                rst_file_path = os.path.join(result_dir, filename.replace('transcript','result'))
+
+                query_lines=[]
+                query_line=''
+                ref_line=''
+                with open(query_file_path, 'r') as query_file, open(ref_file_path, 'r') as ref_file, open(rst_file_path, 'w+') as rst_file:
+
+                    for line in query_file:
+                        line = re.split(';', line)
+                        line = regex.sub('', line[0]).rstrip().lower()
+                        query_line += line + ' '
+                        #query_lines.append(line)
+
+                    #trim_query_lines('query_trimmed', query_lines, sw)
+
+
+                    for line in ref_file:
+                        line = regex.sub('', line).rstrip().lower()
+                        ref_line += line + ' '
+
+
+                    #print query_line
+                    #print ref_line
+
+                    alignment=sw.align(query_line,ref_line)
+                    x=alignment.match() #x[0] act x[1] rec
+
+                    print('****************************************************************')
+
+                    #print_alignment_withSymbol(x[0],x[1],x[2],sys.stdout)
+                    #print_alignment(x[0],x[1],sys.stdout)
+                    a=aligned_act_filtering(ref_line, x[0])
+                    b=aligned_rec_filtering(query_line, x[1])
+                    print_alignment(a,b,rst_file)
+                    bb=b.split()
+                    aa=a.split()
+                    x=wer(bb,aa)
+                    rst_file.write('\n\n\ntotal words: %d' % len(aa))
+                    rst_file.write('\nERRORS: %d' % x)
+                    rst_file.write('\nWER: %.4f\n' % (x/float(len(aa))))
+                    #return(len(aa),x,x/len(aa))
+
+
+
+if __name__ == "__main__":
+   main(sys.argv[1:])
+

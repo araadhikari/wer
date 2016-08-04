@@ -1,10 +1,12 @@
 import sys, os, getopt
 import string
+#from string import whitespace
 import numpy
 import re
 from difflib import SequenceMatcher
 import swalign
 import textwrap
+import distance
 
 '''
 for the swalign stuff, had to make some changes to the file to fix syntax
@@ -94,6 +96,29 @@ def wer(r, h): #r and h are lists
 
     return d[len(r)][len(h)]
 
+def wer2(r, h): #r and h are lists
+    # initialisation
+    d = numpy.zeros((len(r)+1)*(len(h)+1), dtype=numpy.uint8)
+    d = d.reshape((len(r)+1, len(h)+1))
+    for i in range(len(r)+1):
+        for j in range(len(h)+1):
+            if i == 0:
+                d[0][j] = j
+            elif j == 0:
+                d[i][0] = i
+    # computation
+    for i in range(1, len(r)+1):
+        for j in range(1, len(h)+1):
+            if r[i-1] == h[j-1]:
+                d[i][j] = d[i-1][j-1]
+            else:
+                substitution = d[i-1][j-1] + 1
+                insertion    = d[i][j-1] + 1
+                deletion     = d[i-1][j] + 1
+                d[i][j] = min(substitution, insertion, deletion)
+
+    return d[len(r)][len(h)]
+
 def print_alignment(str1,str2, out, width=100):
     l1=len(str1)
     l2=len(str2)
@@ -118,7 +143,29 @@ def print_alignment(str1,str2, out, width=100):
         out.write(line1+'\n')
         out.write(line2+'\n\n')
 
+def print_alignment2(str1,str2, width=100):
+    l1=len(str1)
+    l2=len(str2)
 
+    i = 0
+    while i < min(l1,l2):
+        line1 = str1[i:min(i+width,l1)]
+        line2 = str2[i:min(i+width,l2)]
+
+        i += width
+
+        if min(i,l1-1,l2-1) is not i:
+            break
+
+        while str1[i] is not ' ' or str2[i] is not ' ':
+            line1 += str1[i]
+            line2 += str2[i]
+            i += 1
+            if min(i,l1-1,l2-1) is not i:
+                break
+
+        print(line1+'\n')
+        print(line2+'\n\n')
 
 def print_alignment_withSymbol(str1,str2, symbol, out, width=100):
 
@@ -151,6 +198,36 @@ def print_alignment_withSymbol(str1,str2, symbol, out, width=100):
         out.write(line2+'\n')
         out.write(line3+'\n\n')
 
+def print_alignment_withSymbol2(str1,str2, symbol, width=100):
+
+    reg = [' ','-']
+
+    l1=len(str1)
+    l2=len(str2)
+    l3=len(symbol)
+
+    i = 0
+    while i < min(l1,l2):
+        line1 = str1[i:min(i+width,l1)]
+        line2 = symbol[i:min(i+width,l3)]
+        line3 = str2[i:min(i+width,l2)]
+
+        i += width
+
+        if min(i,l1-1,l2-1) is not i:
+            break
+
+        while str1[i] not in reg or str2[i] not in reg:
+            line1 += str1[i]
+            line2 += symbol[i]
+            line3 += str2[i]
+            i += 1
+            if min(i,l1-1,l2-1) is not i:
+                break
+
+        print(line1+'\n')
+        print(line2+'\n')
+        print(line3+'\n\n')
 
 def remove_ref_punctuation(lines_list,grnd): #lines_list is list of transcript file lines
     reg123=['\'','\"','\.*','\,','\?','\!']
@@ -309,18 +386,17 @@ def phrase_matching():
     storyq_filename='cyber4_robot_story_questions.txt'
     storya=[]
 
-    punc=['.','!','?']
     with (open(storya_filename, encoding='cp437')) as z:
         x = z.read()
         for c in string.punctuation:
-            if c in punc:
-                x=x.replace(c,'.')
             x=x.replace(c,'')
         s = x.splitlines()
         for ss in s:
             if ss!='':
                 storya.append(ss.lower())
-    print(storya)
+    #print(storya)
+    robot_story_string = list_to_string(storya)
+    print('Robot story: ',robot_story_string)
 
     match = 3
     mismatch = -1
@@ -328,27 +404,127 @@ def phrase_matching():
     sw = swalign.LocalAlignment(scoring, -1.5, -.4)  # you can also choose gap penalties, etc...
     # can play around with values of match, mismatch, and the gaps parameters in localalignment
 
-    ref_line=''
-    with open('CYBER4-P003-Y-c_2storytellingChanges.txt',encoding='cp437') as z:
-        x= z.read()
-        for c in string.punctuation:
-            x=x.replace(c,'')
-        s=x.splitlines()
-        #print(s)
-        sss=[]
-        for ss in s:
-            if ss!='':
-                sss.append(ss.lower())
-        ref_line=list_to_string(sss)
-        print(ref_line)
-    print('#####################')
-    ##hmmmm need to find a better way to do this...
-    for line in storya:
-        alignment = sw.align(line, ref_line)
-        x = alignment.match()  # x[0] act x[1] rec
-        print_alignment(x[0], x[1], sys.stdout)
-        print('*********')
+    ref_lines=[]
+    with open('CYBER4-P003-Y-c_2storytellingChanges.txt', encoding='cp437') as z:
+        lines=z.readlines()
+        #print(lines)
+        for i in range(len(lines)):
+            x=lines[i].rstrip('\n')
+            if x!='':
+                for c in string.punctuation:
+                    #if c=='.' or c=='?' or c==',' or c=='!':
+                        #x=x.replace(c,'$')
+                    x=x.replace(c,'')
+                ref_lines.append(x.lower())
+    child=list_to_string(ref_lines)
+    robot=robot_story_string
+    print('Child story: ',child)
+    print('------------------------')
+    alignment=sw.align(child,robot)
+    #x=alignment.dump()
+    x=alignment.match() #x[0] is robot x[1] is child
+    #print(x[0])
+    robot_align=aligned_act_filtering(robot,x[0])
+    child_align = aligned_rec_filtering(child,x[1])
+    #print(robot_align)
+    #print(child_align)
+    print_alignment2(robot_align,child_align)
 
+    #split based on child align
+    # error=wer(ref_align,query_align)
+    # print(error)
+    # print(len(query_align.split()))
+    # print(error/len(query_align.split()))
+
+
+    # child_align_split = re.split("  +",child_align)
+    # print(child_align_split)
+    # print(child_align)
+    # #print(len(robot_align))
+    # #print(len(child_align))
+    # split_index=[0]
+    # prev_index=0
+    # for phrase in child_align_split:
+    #     #print('!@!#@$^$^&#%&*&*')
+    #     #print('phrase ', phrase)
+    #     #print(child_align[prev_index:])
+    #     index=child_align[prev_index:].find(phrase)
+    #     #print('index ',index)
+    #     #print('length of phrase', len(phrase))
+    #     prev_index+=len(phrase)+index
+    #     split_index.append(prev_index)
+    # print(split_index)
+    # #print(child_align)
+    # #print(child_align[0:split_index[-1]])
+    # robot_align_split=[]
+    # print(split_index[:-1])
+    # index_tracker=split_index
+    # start_ind=index_tracker[0]
+    # end_ind=index_tracker[1]
+    # for index in split_index[:-1]:
+    #     phrase=robot_align[start_ind:end_ind]
+    #     robot_align_split.append(phrase)
+    #     #print(phrase)
+    #     index_tracker.pop(0)
+    #     start_ind=index_tracker[0]
+    #     if len(index_tracker)==1:
+    #         end_ind = len(robot_align)
+    #     else:
+    #         end_ind = index_tracker[1]
+    # print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
+    # for i in range(len(child_align_split)):
+    #     print(child_align_split[i])
+    #     print(robot_align_split[i])
+    #     print('levenshtein distance: ', distance.nlevenshtein(child_align_split[i],robot_align_split[i]))
+    #     print('~~~~~~~~~~~~~~')
+
+    #split based on robot align
+    robot_align_split = re.split("   +",robot_align)
+    print(robot_align_split)
+    print(robot_align)
+    #print(len(robot_align))
+    #print(len(child_align))
+    split_index=[0]
+    prev_index=0
+    for phrase in robot_align_split:
+        #print('!@!#@$^$^&#%&*&*')
+        #print('phrase ', phrase)
+        #print(child_align[prev_index:])
+        index=robot_align[prev_index:].find(phrase)
+        #print('index ',index)
+        #print('length of phrase', len(phrase))
+        prev_index+=len(phrase)+index
+        split_index.append(prev_index)
+    print(split_index)
+    #print(child_align)
+    #print(child_align[0:split_index[-1]])
+    child_align_split=[]
+    print(split_index[:-1])
+    index_tracker=split_index
+    start_ind=index_tracker[0]
+    end_ind=index_tracker[1]
+    for index in split_index[:-1]:
+        phrase=child_align[start_ind:end_ind]
+        child_align_split.append(phrase)
+        #print(phrase)
+        index_tracker.pop(0)
+        start_ind=index_tracker[0]
+        if len(index_tracker)==1:
+            end_ind = len(child_align)
+        else:
+            end_ind = index_tracker[1]
+    print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
+    matches=[]
+    for i in range(len(robot_align_split)):
+        print(robot_align_split[i])
+        print(child_align_split[i])
+        dist= distance.nlevenshtein(child_align_split[i],robot_align_split[i]) #lower score closer to being a better match
+        print('levenshtein distance: ', dist)
+        if dist < 0.6:
+            matches.append((robot_align_split[i],child_align_split[i]))
+        print('~~~~~~~~~~~~~~')
+    for i in matches:
+        print(i)
 
 
 

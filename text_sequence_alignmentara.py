@@ -480,8 +480,8 @@ def phrase_matching():
 
     #split based on robot align
     robot_align_split = re.split("   +",robot_align)
-    print(robot_align_split)
-    print(robot_align)
+    #print(robot_align_split)
+    #print(robot_align)
     #print(len(robot_align))
     #print(len(child_align))
     split_index=[0]
@@ -495,11 +495,11 @@ def phrase_matching():
         #print('length of phrase', len(phrase))
         prev_index+=len(phrase)+index
         split_index.append(prev_index)
-    print(split_index)
+    #print(split_index)
     #print(child_align)
     #print(child_align[0:split_index[-1]])
     child_align_split=[]
-    print(split_index[:-1])
+    #print(split_index[:-1])
     index_tracker=split_index
     start_ind=index_tracker[0]
     end_ind=index_tracker[1]
@@ -513,22 +513,149 @@ def phrase_matching():
             end_ind = len(child_align)
         else:
             end_ind = index_tracker[1]
-    print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
+    #print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
     matches=[]
+    substring_matches=[]
     for i in range(len(robot_align_split)):
-        print(robot_align_split[i])
-        print(child_align_split[i])
-        dist= distance.nlevenshtein(child_align_split[i],robot_align_split[i]) #lower score closer to being a better match
-        print('levenshtein distance: ', dist)
-        if dist < 0.6:
-            matches.append((robot_align_split[i],child_align_split[i]))
-        print('~~~~~~~~~~~~~~')
-    for i in matches:
-        print(i)
+        #print(robot_align_split[i])
+        #print(child_align_split[i])
+        #dist= distance.nlevenshtein(child_align_split[i],robot_align_split[i]) #lower score closer to being a better match
+        #print('levenshtein distance: ', dist)
+        str1=child_align_split[i]
+        str2=robot_align_split[i]
+        print(str1) #from robot
+        print(str2) #from child
+        x=substringsFinder(str1,str2)
+        substring_matches+=x
+        print(x)
+        print('*****')
+    print(substring_matches)
 
 
+
+#http://stackoverflow.com/questions/18715688/find-common-substring-between-two-strings
+def longestSubstringFinder(str1, str2):
+    answer = ""
+
+    if len(str1) == len(str2):
+        if str1==str2:
+            return str1
+        else:
+            longer=str1
+            shorter=str2
+    elif (len(str1) == 0 or len(str2) == 0):
+        return ""
+    elif len(str1)>len(str2):
+        longer=str1
+        shorter=str2
+    else:
+        longer=str2
+        shorter=str1
+
+    matrix = numpy.zeros((len(shorter), len(longer)))
+
+    for i in range(len(shorter)):
+        for j in range(len(longer)):
+            if shorter[i]== longer[j]:
+                matrix[i][j]=1
+
+    longest=0
+
+    start=[-1,-1]
+    end=[-1,-1]
+    for i in range(len(shorter)-1, -1, -1):
+        for j in range(len(longer)):
+            count=0
+            begin = [i,j]
+            while matrix[i][j]==1:
+
+                finish=[i,j]
+                count=count+1
+                if j==len(longer)-1 or i==len(shorter)-1:
+                    break
+                else:
+                    j=j+1
+                    i=i+1
+
+            i = i-count
+            if count>longest:
+                longest=count
+                start=begin
+                end=finish
+                break
+
+    answer=shorter[int(start[0]): int(end[0])+1]
+    return answer
+
+#http://stackoverflow.com/questions/18715688/find-common-substring-between-two-strings
+'''
+def compareTwoStrings(string1, string2):
+    list1 = list(string1)
+    list2 = list(string2)
+
+    match = []
+    output = ""
+    length = 0
+
+    for i in range(0, len(list1)):
+
+        if list1[i] in list2:
+            match.append(list1[i])
+
+            for j in range(i + 1, len(list1)):
+
+                if ''.join(list1[i:j]) in string2:
+                    match.append(''.join(list1[i:j]))
+
+                else:
+                    continue
+        else:
+            continue
+
+    for string in match:
+
+        if length < len(list(string)):
+            length = len(list(string))
+            output = string
+        else:
+            continue
+
+    return output
+'''
+
+def substringsFinder(str1,str2,len_min=3):
+    substrings = []
+    x = longestSubstringFinder(str1, str2)
+    while len(x) >= len_min:
+        substrings.append(x)
+        # print(x)
+        ###removing the substring is sometime taking away parts that match later... example: s taken out of stuck b/c it matched 'his head s' for 'his head so' and 'his head stuck'
+        ###find a way to fix it next time...
+        str1 = re.sub(x, ' ', str1)
+        str2 = re.sub(x, ' ', str2)
+        #print(str1)
+        #print(str2)
+        x = longestSubstringFinder(str1, str2)
+        print(x)
+    output=[]
+    for s in substrings:
+        ss=re.sub('  +','',s).strip()
+        #print(ss)
+        if ss!='' and len(ss)>=len_min:
+            output.append(ss)
+    #print(output)
+    return(output)
 
 def main(argv):
+    phrase_matching()
+
+    #
+    # str1='there  once               was a boy who   had      a dog     and a small  pet frog he kept the frog in'
+    # str2='theres one with the there was a boy with   a  little dog lil and a    lil and          little  frog and'
+    # print(str1)
+    # print(str2)
+    # print(substringsFinder(str1,str2))
+
     '''
 
     query_dir = ''     # text to be aligned (e.g., result from speech api)
@@ -619,7 +746,7 @@ def main(argv):
                     #return(len(aa),x,x/len(aa))
 
     '''
-    phrase_matching()
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

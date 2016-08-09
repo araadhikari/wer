@@ -381,139 +381,9 @@ def trim_query_lines(dir, query_lines, align_parser):
 
 
 def exact_phrase_matching():
-    storya_filename='cyber4_robot_story_A.txt'
-    storyb_filename='cyber4_robot_story_B.txt'
-    storyf_filename='cyber4_robot_story_full.txt'
-    storyq_filename='cyber4_robot_story_questions.txt'
-    storya=[]
-
-    with (open(storya_filename, encoding='cp437')) as z:
-        x = z.read()
-        for c in string.punctuation:
-            x=x.replace(c,'')
-        s = x.splitlines()
-        for ss in s:
-            if ss!='':
-                storya.append(ss.lower())
-    #print(storya)
-    robot_story_string = list_to_string(storya)
-    print('Robot story: ',robot_story_string)
-
-    match = 3
-    mismatch = -1
-    scoring = swalign.NucleotideScoringMatrix(match, mismatch)
-    sw = swalign.LocalAlignment(scoring, -1.5, -.4)  # you can also choose gap penalties, etc...
-    # can play around with values of match, mismatch, and the gaps parameters in localalignment
-
-    ref_lines=[]
-    with open('CYBER4-P003-Y-c_2storytellingChanges.txt', encoding='cp437') as z:
-        lines=z.readlines()
-        #print(lines)
-        for i in range(len(lines)):
-            x=lines[i].rstrip('\n')
-            if x!='':
-                for c in string.punctuation:
-                    #if c=='.' or c=='?' or c==',' or c=='!':
-                        #x=x.replace(c,'$')
-                    x=x.replace(c,'')
-                ref_lines.append(x.lower())
-    child=list_to_string(ref_lines)
-    robot=robot_story_string
-    print('Child story: ',child)
-    print('------------------------')
-    alignment=sw.align(child,robot)
-    #x=alignment.dump()
-    x=alignment.match() #x[0] is robot x[1] is child
-    #print(x[0])
-    robot_align=aligned_act_filtering(robot,x[0])
-    child_align = aligned_rec_filtering(child,x[1])
-    #print(robot_align)
-    #print(child_align)
-    print_alignment2(robot_align,child_align)
-
-    #split based on child align
-    # error=wer(ref_align,query_align)
-    # print(error)
-    # print(len(query_align.split()))
-    # print(error/len(query_align.split()))
-
-
-    # child_align_split = re.split("  +",child_align)
-    # print(child_align_split)
-    # print(child_align)
-    # #print(len(robot_align))
-    # #print(len(child_align))
-    # split_index=[0]
-    # prev_index=0
-    # for phrase in child_align_split:
-    #     #print('!@!#@$^$^&#%&*&*')
-    #     #print('phrase ', phrase)
-    #     #print(child_align[prev_index:])
-    #     index=child_align[prev_index:].find(phrase)
-    #     #print('index ',index)
-    #     #print('length of phrase', len(phrase))
-    #     prev_index+=len(phrase)+index
-    #     split_index.append(prev_index)
-    # print(split_index)
-    # #print(child_align)
-    # #print(child_align[0:split_index[-1]])
-    # robot_align_split=[]
-    # print(split_index[:-1])
-    # index_tracker=split_index
-    # start_ind=index_tracker[0]
-    # end_ind=index_tracker[1]
-    # for index in split_index[:-1]:
-    #     phrase=robot_align[start_ind:end_ind]
-    #     robot_align_split.append(phrase)
-    #     #print(phrase)
-    #     index_tracker.pop(0)
-    #     start_ind=index_tracker[0]
-    #     if len(index_tracker)==1:
-    #         end_ind = len(robot_align)
-    #     else:
-    #         end_ind = index_tracker[1]
-    # print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
-    # for i in range(len(child_align_split)):
-    #     print(child_align_split[i])
-    #     print(robot_align_split[i])
-    #     print('levenshtein distance: ', distance.nlevenshtein(child_align_split[i],robot_align_split[i]))
-    #     print('~~~~~~~~~~~~~~')
-
-    #split based on robot align
-    robot_align_split = re.split("   +",robot_align)
-    #print(robot_align_split)
-    #print(robot_align)
-    #print(len(robot_align))
-    #print(len(child_align))
-    split_index=[0]
-    prev_index=0
-    for phrase in robot_align_split:
-        #print('!@!#@$^$^&#%&*&*')
-        #print('phrase ', phrase)
-        #print(child_align[prev_index:])
-        index=robot_align[prev_index:].find(phrase)
-        #print('index ',index)
-        #print('length of phrase', len(phrase))
-        prev_index+=len(phrase)+index
-        split_index.append(prev_index)
-    #print(split_index)
-    #print(child_align)
-    #print(child_align[0:split_index[-1]])
-    child_align_split=[]
-    #print(split_index[:-1])
-    index_tracker=split_index
-    start_ind=index_tracker[0]
-    end_ind=index_tracker[1]
-    for index in split_index[:-1]:
-        phrase=child_align[start_ind:end_ind]
-        child_align_split.append(phrase)
-        #print(phrase)
-        index_tracker.pop(0)
-        start_ind=index_tracker[0]
-        if len(index_tracker)==1:
-            end_ind = len(child_align)
-        else:
-            end_ind = index_tracker[1]
+    x=phrases_alignments()
+    robot_align_split=x[0]
+    child_align_split=x[1]
     #print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
     matches=[]
     substring_matches=[]
@@ -524,13 +394,13 @@ def exact_phrase_matching():
         #print('levenshtein distance: ', dist)
         str1=child_align_split[i]
         str2=robot_align_split[i]
-        print(str1) #from robot
-        print(str2) #from child
+        #print(str1) #from robot
+        #print(str2) #from child
         x=substringsFinder(str1,str2)
         substring_matches+=x
         #print(x)
-        print('*****')
-    print(substring_matches)
+        #print('*****')
+    return substring_matches
 
 
 #http://stackoverflow.com/questions/18715688/find-common-substring-between-two-strings
@@ -587,47 +457,14 @@ def longestSubstringFinder(str1, str2):
     answer=shorter[int(start[0]): int(end[0])+1]
     return answer
 
-#http://stackoverflow.com/questions/18715688/find-common-substring-between-two-strings
-'''
-def compareTwoStrings(string1, string2):
-    list1 = list(string1)
-    list2 = list(string2)
-
-    match = []
-    output = ""
-    length = 0
-
-    for i in range(0, len(list1)):
-
-        if list1[i] in list2:
-            match.append(list1[i])
-
-            for j in range(i + 1, len(list1)):
-
-                if ''.join(list1[i:j]) in string2:
-                    match.append(''.join(list1[i:j]))
-
-                else:
-                    continue
-        else:
-            continue
-
-    for string in match:
-
-        if length < len(list(string)):
-            length = len(list(string))
-            output = string
-        else:
-            continue
-
-    return output
-'''
-
 def substringsFinder(str1,str2,len_min=3):
     substrings = []
     ## rsplit(' ',1)[0] to help hopefully filter out cut off words
     ### example: s taken out of stuck b/c it matched 'his head s' for 'his head so' and 'his head stuck'
-    x = longestSubstringFinder(str1, str2).rsplit(' ',1)[0]
+    #print('substring finder')
+    #print(str1)
+    #print(str2)
+    x = longestSubstringFinder(str1+' ', str2+' ').rsplit(' ',1)[0]
     while len(x) >= len_min:
         substrings.append(x)
         #print(x)
@@ -651,13 +488,13 @@ def substringsFinder(str1,str2,len_min=3):
     output2=[]
     for i in range(len(output)):
         tokenized=output[i].split()
-        print(tokenized)
+        #print(tokenized)
         length=len(tokenized)
         if length>2:
             output2.append(output[i])
     return(output2)
 
-def similar_phase_matching():
+def phrases_alignments():
     storya_filename = 'cyber4_robot_story_A.txt'
     storyb_filename = 'cyber4_robot_story_B.txt'
     storyf_filename = 'cyber4_robot_story_full.txt'
@@ -694,8 +531,8 @@ def similar_phase_matching():
                     # x=x.replace(c,'$')
                     x = x.replace(c, '')
                 ref_lines.append(x.lower())
-    child = list_to_string(ref_lines)
-    robot = robot_story_string
+    child = list_to_string(ref_lines)+' '
+    robot = robot_story_string+' '
     print('Child story: ', child)
     print('------------------------')
     alignment = sw.align(child, robot)
@@ -708,61 +545,13 @@ def similar_phase_matching():
     # print(child_align)
     print_alignment2(robot_align, child_align)
 
-    # split based on child align
-    # error=wer(ref_align,query_align)
-    # print(error)
-    # print(len(query_align.split()))
-    # print(error/len(query_align.split()))
-
-
-    # child_align_split = re.split("  +",child_align)
-    # print(child_align_split)
-    # print(child_align)
-    # #print(len(robot_align))
-    # #print(len(child_align))
-    # split_index=[0]
-    # prev_index=0
-    # for phrase in child_align_split:
-    #     #print('!@!#@$^$^&#%&*&*')
-    #     #print('phrase ', phrase)
-    #     #print(child_align[prev_index:])
-    #     index=child_align[prev_index:].find(phrase)
-    #     #print('index ',index)
-    #     #print('length of phrase', len(phrase))
-    #     prev_index+=len(phrase)+index
-    #     split_index.append(prev_index)
-    # print(split_index)
-    # #print(child_align)
-    # #print(child_align[0:split_index[-1]])
-    # robot_align_split=[]
-    # print(split_index[:-1])
-    # index_tracker=split_index
-    # start_ind=index_tracker[0]
-    # end_ind=index_tracker[1]
-    # for index in split_index[:-1]:
-    #     phrase=robot_align[start_ind:end_ind]
-    #     robot_align_split.append(phrase)
-    #     #print(phrase)
-    #     index_tracker.pop(0)
-    #     start_ind=index_tracker[0]
-    #     if len(index_tracker)==1:
-    #         end_ind = len(robot_align)
-    #     else:
-    #         end_ind = index_tracker[1]
-    # print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
-    # for i in range(len(child_align_split)):
-    #     print(child_align_split[i])
-    #     print(robot_align_split[i])
-    #     print('levenshtein distance: ', distance.nlevenshtein(child_align_split[i],robot_align_split[i]))
-    #     print('~~~~~~~~~~~~~~')
-
     # split based on robot align
     robot_align_split = re.split("   +", robot_align)
     # print(robot_align_split)
     # print(robot_align)
     # print(len(robot_align))
     # print(len(child_align))
-    split_index = [0]
+    robot_split_index = [0]
     prev_index = 0
     for phrase in robot_align_split:
         # print('!@!#@$^$^&#%&*&*')
@@ -772,28 +561,54 @@ def similar_phase_matching():
         # print('index ',index)
         # print('length of phrase', len(phrase))
         prev_index += len(phrase) + index
-        split_index.append(prev_index)
+        robot_split_index.append(prev_index)
     # print(split_index)
     # print(child_align)
     # print(child_align[0:split_index[-1]])
     child_align_split = []
     # print(split_index[:-1])
-    index_tracker = split_index
+    index_tracker = robot_split_index
     start_ind = index_tracker[0]
     end_ind = index_tracker[1]
-    for index in split_index[:-1]:
-        phrase = child_align[start_ind:end_ind]
+    # trying to handle split between sentences with the end_ind_space
+    for index in robot_split_index[:-2]:
+        # #end_ind_space = child_align.index(" ", end_ind)
+        # print(end_ind)
+        # #print(end_ind_space)
+        # #phrase = child_align[start_ind:end_ind_space]
+        # phrase = child_align[start_ind:end_ind]
+        #
+        # print('phrase ',phrase)
+        # child_align_split.append(phrase)
+        # # print(phrase)
+        # index_tracker.pop(0)
+        # start_ind = index_tracker[0]
+        # if len(index_tracker) == 1:
+        #     end_ind = len(child_align)
+        # else:
+        #     end_ind = index_tracker[1]
+        end_ind_space=child_align.index(" ",end_ind-1)
+        #print(end_ind)
+        #print(end_ind_space)
+        phrase=child_align[start_ind:end_ind_space]
+        #print('phrase: ',phrase)
         child_align_split.append(phrase)
-        # print(phrase)
         index_tracker.pop(0)
-        start_ind = index_tracker[0]
-        if len(index_tracker) == 1:
-            end_ind = len(child_align)
-        else:
-            end_ind = index_tracker[1]
+        start_ind=end_ind_space
+        end_ind=index_tracker[1]
+    child_align_split.append(child_align[end_ind_space:])
+
+    # for i in range(len(robot_align_split)):
+    #     print(robot_align_split[i])
+    #     print(child_align_split[i])
+    return (robot_align_split,child_align_split)
+
+def similar_phrase_matching():
+    x=phrases_alignments()
+    robot_align_split=x[0]
+    child_align_split=x[1]
     # print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
-    matches = []
-    substring_similarities = []
+    fuzzy_matches = []
     for i in range(len(robot_align_split)):
         # print(robot_align_split[i])
         # print(child_align_split[i])
@@ -801,19 +616,48 @@ def similar_phase_matching():
         # print('levenshtein distance: ', dist)
         str1 = child_align_split[i]
         str2 = robot_align_split[i]
-        print(str1)  # from robot
-        print(str2)  # from child
-        print('length of string 1',len(str1.split(' ')))
-        print('length of string 2', len(str2.split(' ')))
-        print('fuzz token ratio: ',fuzzywuzzy.fuzz.token_sort_ratio(str1,str2))
-        ###work on getting the number of similar words between the two also, not just the fuzzywuzzy token ratio????
-        print('*****')
+
+        print(str2)  # from robot
+        print(str1)  # from child
+
+        str1_split=re.split(" ", str1) #child words
+        str2_split=re.split(" ", str2) #robot words
+        str1_split_filtered=[]
+        str2_split_filtered=[]
+        for word in str1_split:
+            if word!='':
+                str1_split_filtered.append(word)
+        for word in str2_split:
+            if word!='':
+                str2_split_filtered.append(word)
+        print(' robot ',str2_split_filtered)
+        print(' child ',str1_split_filtered)
+
+        fuzzy=fuzzywuzzy.fuzz.token_sort_ratio(str1,str2)
+        print('fuzz token ratio: ',fuzzy)
+
+        if fuzzy >=60:
+            ###work on getting the number of similar words between the two also, not just the fuzzywuzzy token ratio????
+            match_count=0
+            print('len robot phrase ', len(str2_split_filtered))
+            print('len child phrase ', len(str1_split_filtered))
+            for word in str2_split_filtered:
+                if len(str1_split_filtered)!= 0:
+                    if word in str1_split_filtered:
+                        str1_split_filtered.remove(word)
+                        match_count+=1
+            print('match count: ', match_count)
+            print('*****')
+            fuzzy_matches.append((str2,str1))
+    return fuzzy_matches
 
 
 
 def main(argv):
-    #exact_phrase_matching()
-    similar_phase_matching()
+    #print(exact_phrase_matching())
+    matches=similar_phrase_matching()
+    for m in matches:
+        print(m)
 
     '''
 

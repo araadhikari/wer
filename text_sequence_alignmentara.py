@@ -8,6 +8,7 @@ import swalign
 import textwrap
 import distance
 import fuzzywuzzy.fuzz
+from xlrd import open_workbook
 
 '''
 for the swalign stuff, had to make some changes to the file to fix syntax
@@ -380,8 +381,8 @@ def trim_query_lines(dir, query_lines, align_parser):
         alignment.dump()
 
 
-def exact_phrase_matching():
-    x=phrases_alignments()
+def exact_phrase_matching(child_story,robot_story):
+    x=phrases_alignments(child_story,robot_story)
     robot_align_split=x[0]
     child_align_split=x[1]
     #print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
@@ -494,11 +495,12 @@ def substringsFinder(str1,str2,len_min=3):
             output2.append(output[i])
     return(output2)
 
-def phrases_alignments():
-    storya_filename = 'cyber4_robot_story_A.txt'
-    storyb_filename = 'cyber4_robot_story_B.txt'
-    storyf_filename = 'cyber4_robot_story_full.txt'
-    storyq_filename = 'cyber4_robot_story_questions.txt'
+def phrases_alignments(child_story,robot_story):
+    storya_filename = robot_story
+    # storya_filename = 'cyber4_robot_story_A.txt'
+    # storyb_filename = 'cyber4_robot_story_B.txt'
+    # storyf_filename = 'cyber4_robot_story_full.txt'
+    # storyq_filename = 'cyber4_robot_story_questions.txt'
     storya = []
 
     with (open(storya_filename, encoding='cp437')) as z:
@@ -520,7 +522,7 @@ def phrases_alignments():
     # can play around with values of match, mismatch, and the gaps parameters in localalignment
 
     ref_lines = []
-    with open('CYBER4-P003-Y-c_2storytellingChanges.txt', encoding='cp437') as z:
+    with open(child_story, encoding='cp437') as z:
         lines = z.readlines()
         # print(lines)
         for i in range(len(lines)):
@@ -543,7 +545,7 @@ def phrases_alignments():
     child_align = aligned_rec_filtering(child, x[1])
     # print(robot_align)
     # print(child_align)
-    print_alignment2(robot_align, child_align)
+    #print_alignment2(robot_align, child_align)
 
     # split based on robot align
     robot_align_split = re.split("   +", robot_align)
@@ -617,8 +619,8 @@ def similar_phrase_matching():
         str1 = child_align_split[i]
         str2 = robot_align_split[i]
 
-        print(str2)  # from robot
-        print(str1)  # from child
+        #print(str2)  # from robot
+        #print(str1)  # from child
 
         str1_split=re.split(" ", str1) #child words
         str2_split=re.split(" ", str2) #robot words
@@ -630,34 +632,68 @@ def similar_phrase_matching():
         for word in str2_split:
             if word!='':
                 str2_split_filtered.append(word)
-        print(' robot ',str2_split_filtered)
-        print(' child ',str1_split_filtered)
+        #print(' robot ',str2_split_filtered)
+        #print(' child ',str1_split_filtered)
+
 
         fuzzy=fuzzywuzzy.fuzz.token_sort_ratio(str1,str2)
-        print('fuzz token ratio: ',fuzzy)
+        #print('fuzz token ratio: ',fuzzy)
 
-        if fuzzy >=60:
+
+
+        if fuzzy >=57 :
             ###work on getting the number of similar words between the two also, not just the fuzzywuzzy token ratio????
             match_count=0
-            print('len robot phrase ', len(str2_split_filtered))
-            print('len child phrase ', len(str1_split_filtered))
+            len2=len(str2_split_filtered)
+            len1=len(str1_split_filtered)
+            #print('len robot phrase ', len(str2_split_filtered))
+            #print('len child phrase ', len(str1_split_filtered))
             for word in str2_split_filtered:
                 if len(str1_split_filtered)!= 0:
                     if word in str1_split_filtered:
                         str1_split_filtered.remove(word)
                         match_count+=1
-            print('match count: ', match_count)
-            print('*****')
-            fuzzy_matches.append((str2,str1))
+            #print('match count: ', match_count)
+            #print('*****')
+            fuzzy_matches.append((str2,str1,len2,len1,match_count,fuzzy))
+
     return fuzzy_matches
 
 
 
 def main(argv):
-    #print(exact_phrase_matching())
-    matches=similar_phrase_matching()
+    phrase_matching_file=open('matches.csv',"w")
+    child_story_file='CYBER4-P003-Y-c_2storytellingChanges.txt'
+    robot_story_file='cyber4_robot_story_A.txt'
+
+    wb = open_workbook('Cyber4_Sheet_storyab.xlsx')
+    for s in wb.sheets():
+        # print 'Sheet:',s.name
+        values = []
+        for row in range(s.nrows):
+            col_value = []
+            for col in range(s.ncols):
+                value = (s.cell(row, col).value)
+                try:
+                    value = str(int(value))
+                except:
+                    pass
+                col_value.append(value)
+            values.append(col_value)
+    values.pop(0)
+    print (values)
+
+    matches=exact_phrase_matching(child_story_file,robot_story_file)
+    matches_string=''
     for m in matches:
         print(m)
+        matches_string+=m+','
+    phrase_matching_file.write(child_story_file+','+robot_story_file+','+matches_string)
+
+    phrase_matching_file.close()
+    # matches=similar_phrase_matching()
+    # for m in matches:
+    #     print(m)
 
     '''
 

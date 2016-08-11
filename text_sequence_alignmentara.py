@@ -9,6 +9,8 @@ import textwrap
 import distance
 import fuzzywuzzy.fuzz
 from xlrd import open_workbook
+import nltk
+from nltk.corpus import stopwords
 
 '''
 for the swalign stuff, had to make some changes to the file to fix syntax
@@ -512,7 +514,13 @@ def phrases_alignments(child_story,robot_story):
             if ss != '':
                 storya.append(ss.lower())
     # print(storya)
-    robot_story_string = list_to_string(storya)
+    # words = stopwords.words('english')
+    # print(words)
+    robot_story_string1 = list_to_string(storya)
+    robot_story_token = robot_story_string1.split()
+    filtered_words = [word for word in robot_story_token if word not in stopwords.words('english')]
+    #print('robot story: ',list_to_string(filtered_words))
+    robot_story_string=list_to_string(filtered_words)
     print('Robot story: ', robot_story_string)
 
     match = 3
@@ -533,9 +541,13 @@ def phrases_alignments(child_story,robot_story):
                     # x=x.replace(c,'$')
                     x = x.replace(c, '')
                 ref_lines.append(x.lower())
-    child = list_to_string(ref_lines)+' '
+    child1 = list_to_string(ref_lines)+' '
+    child_story_token = child1.split()
+    filtered_words2 = [word for word in child_story_token if word not in stopwords.words('english')]
+    child=list_to_string(filtered_words2)
     robot = robot_story_string+' '
     print('Child story: ', child)
+
     print('------------------------')
     alignment = sw.align(child, robot)
     # x=alignment.dump()
@@ -545,7 +557,7 @@ def phrases_alignments(child_story,robot_story):
     child_align = aligned_rec_filtering(child, x[1])
     # print(robot_align)
     # print(child_align)
-    #print_alignment2(robot_align, child_align)
+    print_alignment2(robot_align, child_align)
 
     # split based on robot align
     robot_align_split = re.split("   +", robot_align)
@@ -605,8 +617,8 @@ def phrases_alignments(child_story,robot_story):
     #     print(child_align_split[i])
     return (robot_align_split,child_align_split)
 
-def similar_phrase_matching():
-    x=phrases_alignments()
+def similar_phrase_matching(child_story,robot_story):
+    x=phrases_alignments(child_story,robot_story)
     robot_align_split=x[0]
     child_align_split=x[1]
     # print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
@@ -641,7 +653,7 @@ def similar_phrase_matching():
 
 
 
-        if fuzzy >=57 :
+        if fuzzy >=50 :
             ###work on getting the number of similar words between the two also, not just the fuzzywuzzy token ratio????
             match_count=0
             len2=len(str2_split_filtered)
@@ -656,6 +668,7 @@ def similar_phrase_matching():
             #print('match count: ', match_count)
             #print('*****')
             fuzzy_matches.append((str2,str1,len2,len1,match_count,fuzzy))
+            #fuzzy_matches.append((str2, str1, len2, len1, match_count))
 
     return fuzzy_matches
 
@@ -681,7 +694,7 @@ def main(argv):
                 col_value.append(value)
             values.append(col_value)
     values.pop(0)
-    print (values)
+    #print (values)
 
     matches=exact_phrase_matching(child_story_file,robot_story_file)
     matches_string=''
@@ -691,9 +704,9 @@ def main(argv):
     phrase_matching_file.write(child_story_file+','+robot_story_file+','+matches_string)
 
     phrase_matching_file.close()
-    # matches=similar_phrase_matching()
-    # for m in matches:
-    #     print(m)
+    matches=similar_phrase_matching(child_story_file,robot_story_file)
+    for m in matches:
+        print(m)
 
     '''
 

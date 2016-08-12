@@ -11,11 +11,14 @@ import fuzzywuzzy.fuzz
 from xlrd import open_workbook
 import nltk
 from nltk.corpus import stopwords
+from nltk.corpus import words
 
 '''
 for the swalign stuff, had to make some changes to the file to fix syntax
 like changing xrange to range and including print things in ()
 '''
+
+
 
 
 def aligned_rec_filtering(original,rec):
@@ -384,7 +387,8 @@ def trim_query_lines(dir, query_lines, align_parser):
 
 
 def exact_phrase_matching(child_story,robot_story):
-    x=phrases_alignments(child_story,robot_story)
+    more_stop_words = ['theres', 'thats', 'wheres', 'uh', 'theyre','whe','da','l']
+    x=phrases_alignments(child_story,robot_story, more_stop_words)
     robot_align_split=x[0]
     child_align_split=x[1]
     #print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
@@ -399,7 +403,7 @@ def exact_phrase_matching(child_story,robot_story):
         str2=robot_align_split[i]
         #print(str1) #from robot
         #print(str2) #from child
-        x=substringsFinder(str1,str2)
+        x=substringsFinder(str1,str2,3)
         substring_matches+=x
         #print(x)
         #print('*****')
@@ -460,7 +464,7 @@ def longestSubstringFinder(str1, str2):
     answer=shorter[int(start[0]): int(end[0])+1]
     return answer
 
-def substringsFinder(str1,str2,len_min=3):
+def substringsFinder(str1,str2,len_min=2):
     substrings = []
     ## rsplit(' ',1)[0] to help hopefully filter out cut off words
     ### example: s taken out of stuck b/c it matched 'his head s' for 'his head so' and 'his head stuck'
@@ -493,11 +497,13 @@ def substringsFinder(str1,str2,len_min=3):
         tokenized=output[i].split()
         #print(tokenized)
         length=len(tokenized)
-        if length>2:
+        if length>=len_min:
             output2.append(output[i])
     return(output2)
 
-def phrases_alignments(child_story,robot_story):
+def phrases_alignments(child_story,robot_story, additonal_stop_words=[]):
+    stopwords_list = stopwords.words('english')
+    stopwords_list += additonal_stop_words
     storya_filename = robot_story
     # storya_filename = 'cyber4_robot_story_A.txt'
     # storyb_filename = 'cyber4_robot_story_B.txt'
@@ -514,11 +520,10 @@ def phrases_alignments(child_story,robot_story):
             if ss != '':
                 storya.append(ss.lower())
     # print(storya)
-    # words = stopwords.words('english')
-    # print(words)
     robot_story_string1 = list_to_string(storya)
     robot_story_token = robot_story_string1.split()
-    filtered_words = [word for word in robot_story_token if word not in stopwords.words('english')]
+
+    filtered_words = [word for word in robot_story_token if word not in stopwords_list]
     #print('robot story: ',list_to_string(filtered_words))
     robot_story_string=list_to_string(filtered_words)
     print('Robot story: ', robot_story_string)
@@ -543,7 +548,7 @@ def phrases_alignments(child_story,robot_story):
                 ref_lines.append(x.lower())
     child1 = list_to_string(ref_lines)+' '
     child_story_token = child1.split()
-    filtered_words2 = [word for word in child_story_token if word not in stopwords.words('english')]
+    filtered_words2 = [word for word in child_story_token if word not in stopwords_list]
     child=list_to_string(filtered_words2)
     robot = robot_story_string+' '
     print('Child story: ', child)
@@ -618,7 +623,8 @@ def phrases_alignments(child_story,robot_story):
     return (robot_align_split,child_align_split)
 
 def similar_phrase_matching(child_story,robot_story):
-    x=phrases_alignments(child_story,robot_story)
+    more_stop_words=['theres', 'thats', 'wheres', 'uh', 'theyre', 'frog','boy','dog','whe','da','l']
+    x=phrases_alignments(child_story,robot_story,more_stop_words)
     robot_align_split=x[0]
     child_align_split=x[1]
     # print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
@@ -653,7 +659,7 @@ def similar_phrase_matching(child_story,robot_story):
 
 
 
-        if fuzzy >=50 :
+        if fuzzy > 40 :
             ###work on getting the number of similar words between the two also, not just the fuzzywuzzy token ratio????
             match_count=0
             len2=len(str2_split_filtered)
@@ -667,7 +673,8 @@ def similar_phrase_matching(child_story,robot_story):
                         match_count+=1
             #print('match count: ', match_count)
             #print('*****')
-            fuzzy_matches.append((str2,str1,len2,len1,match_count,fuzzy))
+            if len2>2 or len1>2:
+                fuzzy_matches.append((str2,re.sub('  +',' ',str1),len2,len1,match_count,fuzzy))
             #fuzzy_matches.append((str2, str1, len2, len1, match_count))
 
     return fuzzy_matches

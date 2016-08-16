@@ -414,8 +414,10 @@ def exact_phrase_matching(child_story,robot_story):
         substring_matches+=x
         #print(x)
         #print('*****')
-    # if len(substring_matches) ==0:
-    #     print('No exact match')
+    if len(substring_matches) ==0:
+        print('No exact match')
+    else:
+        print('Exact matches:')
     return substring_matches
 
 
@@ -510,6 +512,8 @@ def substringsFinder(str1,str2,len_min=2):
             output2.append(output[i])
     return(output2)
 
+
+##split based on spaces in the robot story alignment string
 def phrases_alignments(child_story,robot_story, additonal_stop_words=[]):
     stopwords_list = stopwords.words('english')
     stopwords_list += additonal_stop_words
@@ -628,15 +632,190 @@ def phrases_alignments(child_story,robot_story, additonal_stop_words=[]):
             start_ind=end_ind_space
             end_ind=index_tracker[1]
         child_align_split.append(child_align[end_ind_space:])
+        # for split in child_align_split:
+        #     print('splits: ', split)
     else:
         #print('need to figure out how to handle the length issue')
         #print(robot_align_split)
         child_align_split.append(child_align)
+        # for split in child_align_split:
+        #     print('else splits: ', split)
 
     # for i in range(len(robot_align_split)):
     #     print(robot_align_split[i])
     #     print(child_align_split[i])
     return (robot_align_split,child_align_split)
+
+##split based on spaces in the child story alignment string
+def phrases_alignments3(child_story,robot_story, additonal_stop_words=[]):
+    stopwords_list = stopwords.words('english')
+    stopwords_list += additonal_stop_words
+    storya_filename = robot_story
+    # storya_filename = 'cyber4_robot_story_A.txt'
+    # storyb_filename = 'cyber4_robot_story_B.txt'
+    # storyf_filename = 'cyber4_robot_story_full.txt'
+    # storyq_filename = 'cyber4_robot_story_questions.txt'
+    storya = []
+
+    with (open(storya_filename, encoding='cp437')) as z:
+        x = z.read()
+        for c in string.punctuation:
+            x = x.replace(c, '')
+        s = x.splitlines()
+        for ss in s:
+            if ss != '':
+                storya.append(ss.lower())
+    # print(storya)
+    robot_story_string1 = list_to_string(storya)
+    robot_story_token = robot_story_string1.split()
+
+    filtered_words = [word for word in robot_story_token if word not in stopwords_list]
+    #print('robot story: ',list_to_string(filtered_words))
+    robot_story_string=list_to_string(filtered_words)
+    print('Robot story: ', robot_story_string)
+
+    match = 3
+    mismatch = -1
+    scoring = swalign.NucleotideScoringMatrix(match, mismatch)
+    sw = swalign.LocalAlignment(scoring, -1.5, -.4)  # you can also choose gap penalties, etc...
+    # can play around with values of match, mismatch, and the gaps parameters in localalignment
+
+    ref_lines = []
+    with open(child_story, encoding='cp437') as z:
+        lines = z.readlines()
+        # print(lines)
+        for i in range(len(lines)):
+            x = lines[i].rstrip('\n')
+            if x != '':
+                for c in string.punctuation:
+                    # if c=='.' or c=='?' or c==',' or c=='!':
+                    # x=x.replace(c,'$')
+                    x = x.replace(c, '')
+                ref_lines.append(x.lower())
+    child1 = list_to_string(ref_lines)+' '
+    child_story_token = child1.split()
+    filtered_words2 = [word for word in child_story_token if word not in stopwords_list]
+    child=list_to_string(filtered_words2)
+    robot = robot_story_string+' '
+    print('Child story: ', child)
+
+    print('------------------------')
+    alignment = sw.align(child, robot)
+    # x=alignment.dump()
+    x = alignment.match()  # x[0] is robot x[1] is child
+    # print(x[0])
+    robot_align = aligned_act_filtering(robot, x[0])
+    child_align = aligned_rec_filtering(child, x[1])
+    # print(robot_align)
+    # print(child_align)
+    #print_alignment2(robot_align, child_align)
+
+    # # split based on robot align
+    # robot_align_split = re.split("   +", robot_align)
+    # # print(robot_align_split)
+    # # print(robot_align)
+    # # print(len(robot_align))
+    # # print(len(child_align))
+    # robot_split_index = [0]
+    # prev_index = 0
+    # for phrase in robot_align_split:
+    #     # print('!@!#@$^$^&#%&*&*')
+    #     # print('phrase ', phrase)
+    #     # print(child_align[prev_index:])
+    #     index = robot_align[prev_index:].find(phrase)
+    #     # print('index ',index)
+    #     # print('length of phrase', len(phrase))
+    #     prev_index += len(phrase) + index
+    #     robot_split_index.append(prev_index)
+    # # print(split_index)
+    # # print(child_align)
+    # # print(child_align[0:split_index[-1]])
+    # child_align_split = []
+    # # print(split_index[:-1])
+    # index_tracker = robot_split_index
+    # start_ind = index_tracker[0]
+    # end_ind = index_tracker[1]
+    # # trying to handle split between sentences with the end_ind_space
+    # end_ind_space=0
+    # #print(len(robot_split_index))
+    # if len(robot_split_index)>2:
+    #     for index in robot_split_index[:-2]:
+    #         # #end_ind_space = child_align.index(" ", end_ind)
+    #         # print(end_ind)
+    #         # #print(end_ind_space)
+    #         # #phrase = child_align[start_ind:end_ind_space]
+    #         # phrase = child_align[start_ind:end_ind]
+    #         #
+    #         # print('phrase ',phrase)
+    #         # child_align_split.append(phrase)
+    #         # # print(phrase)
+    #         # index_tracker.pop(0)
+    #         # start_ind = index_tracker[0]
+    #         # if len(index_tracker) == 1:
+    #         #     end_ind = len(child_align)
+    #         # else:
+    #         #     end_ind = index_tracker[1]
+    #         end_ind_space=child_align.index(" ",end_ind-1)
+    #         #print(end_ind)
+    #         #print(end_ind_space)
+    #         phrase=child_align[start_ind:end_ind_space]
+    #         #print('phrase: ',phrase)
+    #         child_align_split.append(phrase)
+    #         index_tracker.pop(0)
+    #         start_ind=end_ind_space
+    #         end_ind=index_tracker[1]
+    #     child_align_split.append(child_align[end_ind_space:])
+    #     for split in child_align_split:
+    #         print('splits: ', split)
+    # else:
+    #     #print('need to figure out how to handle the length issue')
+    #     #print(robot_align_split)
+    #     child_align_split.append(child_align)
+    #     for split in child_align_split:
+    #         print('else splits: ', split)
+    #
+    # # for i in range(len(robot_align_split)):
+    # #     print(robot_align_split[i])
+    # #     print(child_align_split[i])
+    # return (robot_align_split,child_align_split)
+
+    # split based on child align
+    child_align_split = re.split("   +", child_align)
+    child_split_index = [0]
+    prev_index = 0
+    for phrase in child_align_split:
+        index = child_align[prev_index:].find(phrase)
+        prev_index += len(phrase) + index
+        child_split_index.append(prev_index)
+    robot_align_split = []
+    index_tracker = child_split_index
+    start_ind = index_tracker[0]
+    end_ind = index_tracker[1]
+    # trying to handle split between sentences with the end_ind_space
+    end_ind_space=0
+    if len(child_split_index)>2:
+        for index in child_split_index[:-2]:
+            end_ind_space=robot_align.index(" ",end_ind-1)
+            phrase=robot_align[start_ind:end_ind_space]
+            robot_align_split.append(phrase)
+            index_tracker.pop(0)
+            start_ind=end_ind_space
+            end_ind=index_tracker[1]
+        robot_align_split.append(robot_align[end_ind_space:])
+        # for split in robot_align_split:
+        #     print('splits: ', split)
+    else:
+        #print('need to figure out how to handle the length issue')
+        #print(robot_align_split)
+        robot_align_split.append(robot_align_align)
+        # for split in robot_align_split:
+        #     print('else splits: ', split)
+
+    # for i in range(len(robot_align_split)):
+    #     print(robot_align_split[i])
+    #     print(child_align_split[i])
+    return (robot_align_split,child_align_split)
+
 
 #this one includes stemmer/lemmatizer
 def phrases_alignments2(child_story,robot_story, additonal_stop_words=[]):
@@ -817,8 +996,14 @@ def phrases_alignments2(child_story,robot_story, additonal_stop_words=[]):
 
 
 def similar_phrase_matching(child_story,robot_story):
-    more_stop_words=['theres', 'thats', 'wheres', 'uh','theyre','whe','da','l','boy','dog','frog']
-    x=phrases_alignments(child_story,robot_story,more_stop_words)
+    more_stop_words=['theres', 'thats', 'wheres', 'uh','theyre','whe','da','l']
+    #based on robot splits
+    #x=phrases_alignments(child_story,robot_story,more_stop_words)
+
+    #based on child splits
+    x = phrases_alignments3(child_story, robot_story, more_stop_words)
+
+
     robot_align_split=x[0]
     child_align_split=x[1]
     # print('$$$$$$$$$$$$$$$$$$$$$$$$$$')
@@ -868,7 +1053,7 @@ def similar_phrase_matching(child_story,robot_story):
 
 
 
-        if fuzzy > 40 :
+        if fuzzy > 45 :
             ###work on getting the number of similar words between the two also, not just the fuzzywuzzy token ratio????
             match_count=0
             len2=len(str2_split_filtered)
@@ -882,13 +1067,15 @@ def similar_phrase_matching(child_story,robot_story):
                         match_count+=1
             #print('match count: ', match_count)
             #print('*****')
-            if len2>2 or len1>2:
+            if match_count>1:
                 #fuzzy_matches.append((str2,re.sub('  +',' ',str1),len2,len1,match_count,fuzzy))
                 fuzzy_matches.append((str2_filtered_2, re.sub('  +', ' ', str1_filtered_2), len2, len1, match_count, fuzzy))
             #fuzzy_matches.append((str2, str1, len2, len1, match_count))
 
     if len(fuzzy_matches)==0:
         print('No similar phrases found~')
+    else:
+        print('Similar phrases:')
     return fuzzy_matches
 
 
@@ -939,24 +1126,16 @@ def main(argv):
     #print(len(child_story_files))
     print('###########################################################')
     for i in range(len(child_story_files)):
-    #for i in range(2):
+    #for i in range(5):
         child_story_file = child_story_files[i]
         robot_story_file='cyber4_robot_story_'+corresponding_robot_story_type[i]+'.txt'
         print(child_story_file)
         print(robot_story_file)
         matches = exact_phrase_matching(child_story_file, robot_story_file)
-        if len(matches) ==0:
-            print('No exact matching phrases found~')
-        else:
-            print('Exact matching phrases:')
         for m in matches:
             print(m)
         print('***************************************')
         matches = similar_phrase_matching(child_story_file, robot_story_file)
-        if len(matches) ==0:
-            print('No similar phrases found~')
-        else:
-            print('Similar phrases:')
         for m in matches:
             print(m)
         print('##########################################################')

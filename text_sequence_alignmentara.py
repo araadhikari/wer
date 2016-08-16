@@ -22,7 +22,7 @@ for the swalign stuff, had to make some changes to the file to fix syntax
 like changing xrange to range and including print things in ()
 '''
 
-
+phrase_matching_file=open('matches.txt',"w")
 
 
 def aligned_rec_filtering(original,rec):
@@ -391,7 +391,7 @@ def trim_query_lines(dir, query_lines, align_parser):
 
 
 def exact_phrase_matching(child_story,robot_story):
-    more_stop_words = ['theres', 'thats', 'wheres', 'uh', 'theyre','whe','da','l']
+    more_stop_words = ['theres', 'thats', 'wheres', 'uh', 'theyre','whe','da','l','boy','frog']
     x=phrases_alignments(child_story,robot_story, more_stop_words)
     robot_align_split=x[0]
     child_align_split=x[1]
@@ -409,8 +409,30 @@ def exact_phrase_matching(child_story,robot_story):
         str2=robot_align_split[i]
         #print(str1) #from robot
         #print(str2) #from child
+
+
+        # phrase_matching_file.write('\nstr1: ')
+        # phrase_matching_file.write(str1)
+        # phrase_matching_file.write('\nstr2: ')
+        # phrase_matching_file.write(str2)
+        # phrase_matching_file.write('\n')
+
+
         x=substringsFinder(str1,str2,3)
         #print(x)
+        if len(x)!=0:
+            phrase_matching_file.write('\nstr1: ')
+            phrase_matching_file.write(str1)
+            phrase_matching_file.write('\nstr2: ')
+            phrase_matching_file.write(str2)
+            phrase_matching_file.write('\n')
+            phrase_matching_file.write('exact match: ')
+            x_string=''
+            for xx in x:
+                x_string+=xx+', '
+
+            phrase_matching_file.write(x_string.rstrip(', '))
+            phrase_matching_file.write('\n')
         substring_matches+=x
         #print(x)
         #print('*****')
@@ -996,7 +1018,7 @@ def phrases_alignments2(child_story,robot_story, additonal_stop_words=[]):
 
 
 def similar_phrase_matching(child_story,robot_story):
-    more_stop_words=['theres', 'thats', 'wheres', 'uh','theyre','whe','da','l']
+    more_stop_words=['theres', 'thats', 'wheres', 'uh','theyre','whe','da','l','boy','frog']
     #based on robot splits
     #x=phrases_alignments(child_story,robot_story,more_stop_words)
 
@@ -1022,7 +1044,9 @@ def similar_phrase_matching(child_story,robot_story):
         str1_split=re.split(" ", str1) #child words
         str2_split=re.split(" ", str2) #robot words
         str1_split_filtered=[]
+        str1_split_filtered_noverbchange=[]
         str2_split_filtered=[]
+        str2_split_filtered_noverbchange = []
         #lmtzr = WordNetLemmatizer()
         #stemmer = EnglishStemmer()
         #potter = PorterStemmer()
@@ -1033,6 +1057,7 @@ def similar_phrase_matching(child_story,robot_story):
                 word_stem =change_stem.lemmatize(word,'v')
                 # print(word_stem)
                 # print('~~~~')
+                str1_split_filtered_noverbchange.append(word)
                 str1_split_filtered.append(word_stem)
         for word in str2_split:
             if word!='':
@@ -1040,6 +1065,7 @@ def similar_phrase_matching(child_story,robot_story):
                 word_stem = change_stem.lemmatize(word,'v')
                 # print(word_stem)
                 # print('~~~')
+                str2_split_filtered_noverbchange.append(word)
                 str2_split_filtered.append(word_stem)
         #print(' robot ',str2_split_filtered)
         #print(' child ',str1_split_filtered)
@@ -1048,6 +1074,11 @@ def similar_phrase_matching(child_story,robot_story):
         #fuzzy=fuzzywuzzy.fuzz.token_sort_ratio(str1,str2)
         str1_filtered_2 = list_to_string(str1_split_filtered)
         str2_filtered_2 = list_to_string(str2_split_filtered)
+
+        str1_filtered_2noverbchange=list_to_string(str1_split_filtered_noverbchange)
+        str2_filtered_2noverbchange=list_to_string(str2_split_filtered_noverbchange)
+
+
         fuzzy = fuzzywuzzy.fuzz.token_sort_ratio(str1_filtered_2,str2_filtered_2)
         #print('fuzz token ratio: ',fuzzy)
 
@@ -1070,6 +1101,18 @@ def similar_phrase_matching(child_story,robot_story):
             if match_count>1:
                 #fuzzy_matches.append((str2,re.sub('  +',' ',str1),len2,len1,match_count,fuzzy))
                 fuzzy_matches.append((str2_filtered_2, re.sub('  +', ' ', str1_filtered_2), len2, len1, match_count, fuzzy))
+
+                phrase_matching_file.write('\n\n')
+                phrase_matching_file.write(str1_filtered_2noverbchange)
+                phrase_matching_file.write('\n')
+                phrase_matching_file.write(str2_filtered_2noverbchange)
+                phrase_matching_file.write('\n')
+                similar1=str2_filtered_2
+                similar2=re.sub('  +', ' ', str1_filtered_2)
+                phrase_matching_file.write('similar match: ')
+                phrase_matching_file.write(similar1+' || '+similar2)
+                phrase_matching_file.write('\n')
+
             #fuzzy_matches.append((str2, str1, len2, len1, match_count))
 
     if len(fuzzy_matches)==0:
@@ -1081,7 +1124,7 @@ def similar_phrase_matching(child_story,robot_story):
 
 
 def main(argv):
-    #phrase_matching_file=open('matches.csv',"w")
+
     # child_story_file='CYBER4-P003-Y-c_2storytellingChanges.txt'
     # robot_story_file='cyber4_robot_story_A.txt'
     # matches = exact_phrase_matching(child_story_file, robot_story_file)
@@ -1116,30 +1159,77 @@ def main(argv):
                 col_value.append(value)
             values.append(col_value)
     values.pop(0)
+    print(values)
+    emotion=[]
     corresponding_robot_story_type=[]
     for val in values:
         if val[3] !='':
             #print(val[3])
             corresponding_robot_story_type.append(val[3])
+            emotion.append(val[4])
     #print (corresponding_robot_story_type)
     #print(len(corresponding_robot_story_type))
     #print(len(child_story_files))
     print('###########################################################')
+    flat_exact_total=0
+    flat_similar_total=0
+    flat_count=0
+    emotion_exact_total=0
+    emotion_similar_total=0
+    emotion_count=0
     for i in range(len(child_story_files)):
-    #for i in range(5):
+    #for i in range(3):
         child_story_file = child_story_files[i]
         robot_story_file='cyber4_robot_story_'+corresponding_robot_story_type[i]+'.txt'
         print(child_story_file)
         print(robot_story_file)
-        matches = exact_phrase_matching(child_story_file, robot_story_file)
-        for m in matches:
+        print(emotion[i])
+        phrase_matching_file.write(child_story_file)
+        phrase_matching_file.write('\n')
+        phrase_matching_file.write(emotion[i])
+        phrase_matching_file.write('\n')
+        phrase_matching_file.write('\n')
+        matches1 = exact_phrase_matching(child_story_file, robot_story_file)
+        phrase_matching_file.write('\nEXACT PHRASE MATCHES:\n')
+        for m in matches1:
             print(m)
+            phrase_matching_file.write(m)
+            phrase_matching_file.write('\n')
+        string_matches='Number of exact matches: '+str(len(matches1))
+        phrase_matching_file.write(string_matches)
         print('***************************************')
-        matches = similar_phrase_matching(child_story_file, robot_story_file)
-        for m in matches:
+        matches2 = similar_phrase_matching(child_story_file, robot_story_file)
+        phrase_matching_file.write('\nSIMILAR PHRASE MATCHES:\n')
+        for m in matches2:
             print(m)
+            phrase_matching_file.write(m[0]+' || '+m[1])
+            phrase_matching_file.write('\n')
+        string_matches2 = 'Number of similar matches: ' + str(len(matches2))
+        phrase_matching_file.write(string_matches2)
+        phrase_matching_file.write('\n\n####################################\n')
+        if emotion[i]=='Flat':
+            flat_count+=1
+            flat_exact_total+=len(matches1)
+            flat_similar_total+=len(matches2)
+        elif emotion[i]=='Emotional':
+            emotion_count+=1
+            emotion_exact_total+=len(matches1)
+            emotion_similar_total+=len(matches2)
         print('##########################################################')
-
+    phrase_matching_file.write('\n\n')
+    flat_exact_average=flat_exact_total/flat_count
+    flat_similar_average=flat_similar_total/flat_count
+    emotional_exact_average=emotion_exact_total/emotion_count
+    emotional_similar_average=emotion_similar_total/emotion_count
+    print('flat exact average: '+str(flat_exact_average))
+    print('flat similar average: '+str(flat_similar_average))
+    print('emotional exact average: '+str(emotional_exact_average))
+    print('emotional similar average: '+str(emotional_similar_average))
+    phrase_matching_file.write('\nflat exact average: '+str(flat_exact_average))
+    phrase_matching_file.write('\nflat similar average: '+str(flat_similar_average))
+    phrase_matching_file.write('\nemotional exact average: '+str(emotional_exact_average))
+    phrase_matching_file.write('\nemotional similar average: '+str(emotional_similar_average))
+    phrase_matching_file.close()
     #
     # matches=exact_phrase_matching(child_story_file,robot_story_file)
     # matches_string=''

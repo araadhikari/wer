@@ -18,8 +18,8 @@ like changing xrange to range and including print things in ()
 phrase_matching_file=open('matches.txt',"w")
 
 
-def aligned_rec_filtering(original,rec):
-    y=rec.split()
+def aligned_query_filtering(original,query):
+    y=query.split()
     lengths=[]
     for a in y:
         x=len(a)
@@ -41,8 +41,8 @@ def aligned_rec_filtering(original,rec):
             y[i]=y[i].ljust(lengths[i])
     return list_to_string(y)
 
-def aligned_act_filtering(original, act):
-    y=act.split()
+def aligned_ref_filtering(original, ref):
+    y=ref.split()
     lengths=[]
     for a in y:
         x=len(a)
@@ -100,29 +100,6 @@ def wer(r, h): #r and h are lists
 
     return d[len(r)][len(h)]
 
-def wer2(r, h): #r and h are lists
-    # initialization
-    d = numpy.zeros((len(r)+1)*(len(h)+1), dtype=numpy.uint8)
-    d = d.reshape((len(r)+1, len(h)+1))
-    for i in range(len(r)+1):
-        for j in range(len(h)+1):
-            if i == 0:
-                d[0][j] = j
-            elif j == 0:
-                d[i][0] = i
-    # computation
-    for i in range(1, len(r)+1):
-        for j in range(1, len(h)+1):
-            if r[i-1] == h[j-1]:
-                d[i][j] = d[i-1][j-1]
-            else:
-                substitution = d[i-1][j-1] + 1
-                insertion    = d[i][j-1] + 1
-                deletion     = d[i-1][j] + 1
-                d[i][j] = min(substitution, insertion, deletion)
-
-    return d[len(r)][len(h)]
-
 def print_alignment(str1,str2, out, width=100):
     l1=len(str1)
     l2=len(str2)
@@ -147,6 +124,7 @@ def print_alignment(str1,str2, out, width=100):
         out.write(line1+'\n')
         out.write(line2+'\n\n')
 
+#print to screen instead of cmd line?
 def print_alignment2(str1,str2, width=100):
     l1=len(str1)
     l2=len(str2)
@@ -233,145 +211,7 @@ def print_alignment_withSymbol2(str1,str2, symbol, width=100):
         print(line2+'\n')
         print(line3+'\n\n')
 
-def remove_ref_punctuation(lines_list,grnd): #lines_list is list of transcript file lines
-    reg123=['\'','\"','\.*','\,','\?','\!']
-    reg_list=[]
-    for r in reg123:
-        reg_list.append(re.compile(r))
-
-    paragraphs=lines_list
-    filtered=[]
-    for p in paragraphs:
-        fil=p
-        for regex in reg_list:
-            fil=regex.sub('', fil)
-        filtered.append(fil)
-    t=[]
-    prev=''
-    count=0
-    for i in range(len(filtered)):
-
-        f = filtered[i].lstrip().rstrip().rstrip('\n')
-        if f == '':
-            continue
-        seq=SequenceMatcher(None,prev,f)
-        a=seq.find_longest_match(0,len(prev),0,len(f))
-        x=a[0]
-        y=a[1]
-        size=a[2]
-        str1=prev[x:x+size].lstrip().rstrip()
-        str2=f[y:y+size].lstrip().rstrip()
-##            print(str1,' ||| ', str2)
-##            print(a)
-        if y==0:
-            if prev[x:x+size] == prev[-size:]:
-                c=str1+' '+str2
-##                    print(prev[x:x+size])
-##                    print(prev[-size:])
-##                    print(c, c not in grnd)
-                if c not in grnd:
-##                        print(a)
-##                        print(prev)
-##                        print(f)
-##                        print(c)
-                    t.append(prev[:-size-1])
-
-                else:
-                    t.append(prev)
-
-            else:
-                t.append(prev)
-
-        else:
-            t.append(prev)
-        prev=f
-
-    #not all repetition is removed the first time b/c longest match
-    #isn't always the beginning/end
-    #this below helps get some of the smaller beginnig/end repetitions in transcript
-    #lines, but not all.. I'm not sure how to fix it
-    prev=''
-    s=''
-    count=0
-    for i in range(len(t)):
-        f = t[i].lstrip().rstrip()
-##            print('CURR:', f)
-##            print('PREV:',prev)
-        if f == '':
-            continue
-        ps=prev.split()
-        fs=f.split()
-        j=0
-        w=fs[j]
-        #print(w)
-        w=fs.pop(0)
-        while w in ps and len(fs) !=0:
-            w+=' '+fs[0]
-
-        a=prev.find(w.strip())
-        if a>=0:
-##                print(prev)
-##                print(f)
-##                print(prev[a:],' |||| ',w)
-##                print(a)
-            c=prev[a:]+' '+w
-            #print(c)
-            if prev[a:].strip()==w.strip() and c not in grnd:
-                #print(w,len(w))
-                #print(a)
-                #print(prev[a:],' |||| ',w)
-                #print('repeat')
-                #print(s)
-                s=s[:-len(w.strip())-1]
-                #print(s)
-        s+=f+' '
-        prev=f
-    return s.lower().lstrip().rstrip()
-
 '----------------------------------------------------------------------'
-'''
-names=[]
-grnd_names=[]
-with open('filename.txt') as f:
-    filelist = f.readlines()
-
-    #print(filelist)
-    for name in filelist:
-        x=name[-21:-1]
-        names.append(x)
-        grnd_names.append(x[:-14]+'groundtruth.txt')
-#print(grnd_names)
-#print(names)
-
-error_sum=0
-file=open('child_speech_recognition_evaluation2.txt',"w")
-for i in range(len(names)):
-    paragraphs=[]
-    with open(names[i]) as f:
-        paragraphs=f.readlines()
-    filtered=[]
-    regex=re.compile('\;\d*\.*\d*')
-    #remove the ;numbers at the end of each line in transcrip files and save to new file
-    for p in paragraphs:
-        fil=regex.sub(' ', p)
-        fil=re.compile('\n').sub('',fil)
-        filtered.append(fil)
-
-    a=remove_grnd_punctuation(grnd_names[i])
-    aa=a.split()
-    aaa=list_to_string(aa)
-    r=remove_ref_punctuation(filtered,aaa)
-    rr=r.split()
-    rrr=list_to_string(rr)
-    x=get_alignment_WER(rrr,aaa) #x[0] total words, x[1] # errors, x[2] WER
-    print(grnd_names[i][:-16])
-    print('*******************************************************')
-    s=grnd_names[i][:-16] +','+str(x[0])+','+str(x[1])+','+str(x[2])+'\n'
-    error_sum+=x[2]
-    file.write(s)
-file.close()
-print('average WER: ',error_sum/65)
-'''
 
 def trim_query_lines(dir, query_lines, align_parser):
     # create result and directory
@@ -485,8 +325,8 @@ def exact_phrase_matching(child_story,robot_story, min_len=3):
     # x=alignment.dump()
     x = alignment.match()  # x[0] is robot x[1] is child
     # print(x[0])
-    robot_align = aligned_act_filtering(robot_story, x[0])
-    child_align = aligned_rec_filtering(child_story, x[1])
+    robot_align = aligned_ref_filtering(robot_story, x[0])
+    child_align = aligned_query_filtering(child_story, x[1])
 
 
 
@@ -569,8 +409,8 @@ def similar_phrase_matching(child_story,robot_story, min_match_count=1):
     # x=alignment.dump()
     x = alignment.match()  # x[0] is robot x[1] is child
 
-    robot_align = aligned_act_filtering(robot_story, x[0])
-    child_align = aligned_rec_filtering(child_story, x[1])
+    robot_align = aligned_ref_filtering(robot_story, x[0])
+    child_align = aligned_query_filtering(child_story, x[1])
 
 
     # split based on child align
@@ -709,8 +549,6 @@ def get_stories(child_story,robot_story): #enter file names and get the story st
     #print(child_story_string)
     return(child_story_string,robot_story_string)
 
-
-
 def matches(child_story_files_directory):
     stopwords_list = stopwords.words('english')
     # more words to filter out on top of the default english stopwords in nltk
@@ -825,44 +663,7 @@ def matches(child_story_files_directory):
     phrase_matching_file.write('\nemotional similar average: ' + str(emotional_similar_average))
     phrase_matching_file.close()
 
-
-def main(argv):
-    # Testing individual file for matches
-    '''
-    child_story_file='CYBER4-P040-Y_2storytellingChanges.txt'
-    robot_story_file='cyber4_robot_story_B.txt'
-
-
-    child_story0, robot_story0 = get_stories(child_story_file, robot_story_file)
-    child_story_token = child_story0.split()
-    robot_story_token = robot_story0.split()
-
-    stopwords_list = stopwords.words('english')
-    # more words to filter out on top of the default english stopwords in nltk
-    stopwords_list += ['theres', 'thats', 'wheres', 'uh', 'theyre', 'whe', 'da', 'l', 'boy', 'frog']
-
-    filtered_words1 = [word for word in child_story_token if word not in stopwords_list]
-    child_story = list_to_string(filtered_words1)
-    filtered_words2 = [word for word in robot_story_token if word not in stopwords_list]
-    robot_story = list_to_string(filtered_words2)
-
-    exact_matches2=exact_phrase_matching(child_story,robot_story)
-    for m in exact_matches2:
-        print(m)
-    similar_matches=similar_phrase_matching(child_story,robot_story)
-    for m in similar_matches:
-        print(m)
-    '''
-
-    # matches
-    child_story_files_directory = 'C:\\Users\Aradhana\wer\cyber4storytellingchild'
-    matches(child_story_files_directory)
-
-
-    #code for alignment
-    '''
-    query_dir = ''     # text to be aligned (e.g., result from speech api)
-    ref_dir = ''     # text to be aligned against (e.g., hand transcription)
+def text_alignments(argv,query_dir,ref_dir):
     result_dir = 'result/'
 
     # punctuation
@@ -908,7 +709,7 @@ def main(argv):
                 print (ref_file_path)
                 rst_file_path = os.path.join(result_dir, filename.replace('transcript','result'))
 
-                query_lines=[]
+                #query_lines=[]
                 query_line=''
                 ref_line=''
                 with open(query_file_path, 'r') as query_file, open(ref_file_path, 'r') as ref_file, open(rst_file_path, 'w+') as rst_file:
@@ -931,25 +732,64 @@ def main(argv):
                     #print ref_line
 
                     alignment=sw.align(query_line,ref_line)
-                    x=alignment.match() #x[0] act x[1] rec
+                    x=alignment.match() #x[0] corresponding with ref_line, x[1] corresponding with query_line
 
                     print('****************************************************************')
 
                     #print_alignment_withSymbol(x[0],x[1],x[2],sys.stdout)
                     #print_alignment(x[0],x[1],sys.stdout)
-                    a=aligned_act_filtering(ref_line, x[0])
-                    b=aligned_rec_filtering(query_line, x[1])
-                    print_alignment(a,b,rst_file)
-                    bb=b.split()
-                    aa=a.split()
-                    x=wer(bb,aa)
-                    rst_file.write('\n\n\ntotal words: %d' % len(aa))
-                    rst_file.write('\nERRORS: %d' % x)
-                    rst_file.write('\nWER: %.4f\n' % (x/float(len(aa))))
-                    #return(len(aa),x,x/len(aa))
 
+                    # changed a and aa to be ref_line_filtered and ref_line_filtered_split
+                    # changed b and bb to be query_line_filtered and query_line_filtered_split
+                    # changed aligned_act_filtering name to aligned_ref_filtering
+                    # changed aligned_rec_filtering name to aligned_query_filtering
+                    ref_line_filtered=aligned_ref_filtering(ref_line, x[0])
+                    query_line_filtered=aligned_query_filtering(query_line, x[1])
+                    print_alignment(ref_line_filtered,query_line_filtered,rst_file)
+                    query_line_filtered_split=query_line_filtered.split()
+                    ref_line_filtered_split=ref_line_filtered.split()
+                    errors=wer(query_line_filtered_split,ref_line_filtered_split)
+                    rst_file.write('\n\n\ntotal words: %d' % len(ref_line_filtered_split))
+                    rst_file.write('\nERRORS: %d' % errors)
+                    rst_file.write('\nWER: %.4f\n' % (errors/float(len(ref_line_filtered_split))))
 
+def main(argv):
+    # Testing individual file for matches
     '''
+    child_story_file='CYBER4-P040-Y_2storytellingChanges.txt'
+    robot_story_file='cyber4_robot_story_B.txt'
+
+
+    child_story0, robot_story0 = get_stories(child_story_file, robot_story_file)
+    child_story_token = child_story0.split()
+    robot_story_token = robot_story0.split()
+
+    stopwords_list = stopwords.words('english')
+    # more words to filter out on top of the default english stopwords in nltk
+    stopwords_list += ['theres', 'thats', 'wheres', 'uh', 'theyre', 'whe', 'da', 'l', 'boy', 'frog']
+
+    filtered_words1 = [word for word in child_story_token if word not in stopwords_list]
+    child_story = list_to_string(filtered_words1)
+    filtered_words2 = [word for word in robot_story_token if word not in stopwords_list]
+    robot_story = list_to_string(filtered_words2)
+
+    exact_matches2=exact_phrase_matching(child_story,robot_story)
+    for m in exact_matches2:
+        print(m)
+    similar_matches=similar_phrase_matching(child_story,robot_story)
+    for m in similar_matches:
+        print(m)
+    '''
+
+    matches
+    child_story_files_directory = 'C:\\Users\Aradhana\wer\cyber4storytellingchild'
+    matches(child_story_files_directory)
+
+
+    # query_dir = "C:\\Users\Aradhana\wer\\res\\api_result"     # text to be aligned (e.g., result from speech api)
+    # ref_dir = "C:\\Users\Aradhana\wer\\res\\transcription"     # text to be aligned against (e.g., hand transcription)
+    # text_alignments(argv,query_dir,ref_dir)
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

@@ -12,8 +12,8 @@ like changing xrange to range and including print things in ()
 '''
 
 
-def aligned_rec_filtering(original,rec):
-    y=rec.split()
+def aligned_query_filtering(original,query):
+    y=query.split()
     lengths=[]
     for a in y:
         x=len(a)
@@ -35,8 +35,8 @@ def aligned_rec_filtering(original,rec):
             y[i]=y[i].ljust(lengths[i])
     return list_to_string(y)
 
-def aligned_act_filtering(original, act):
-    y=act.split()
+def aligned_ref_filtering(original, ref):
+    y=ref.split()
     lengths=[]
     for a in y:
         x=len(a)
@@ -322,20 +322,20 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hq:r:",["queryDir=","refDir="])
     except getopt.GetoptError:
-        print 'text_alignment.py -q <query_dir> -r <ref_dir>'
+        print ('text_alignment.py -q <query_dir> -r <ref_dir>')
         sys.exit(2)
 
     for opt, arg in opts:
         if opt == '-h':
-            print 'text_alignment.py -q <query_dir> -r <ref_dir>'
+            print ('text_alignment.py -q <query_dir> -r <ref_dir>')
             sys.exit()
         elif opt in ("-q", "--queryDir"):
             query_dir = arg
         elif opt in ("-r", "--refDir"):
             ref_dir = arg
 
-    print 'Query Directory is ', query_dir
-    print 'Reference Directory is ', ref_dir
+    print ('Query Directory is ', query_dir)
+    print ('Reference Directory is ', ref_dir)
 
     # create result and directory
     if not os.path.exists(result_dir):
@@ -348,12 +348,12 @@ def main(argv):
 
             if filename.endswith('txt'):
                 query_file_path = os.path.join(root, filename)
-                print query_file_path
+                print (query_file_path)
                 ref_file_path = os.path.join(ref_dir, filename.replace('transcript','groundtruth'))
-                print ref_file_path
+                print (ref_file_path)
                 rst_file_path = os.path.join(result_dir, filename.replace('transcript','result'))
 
-                query_lines=[]
+                #query_lines=[]
                 query_line=''
                 ref_line=''
                 with open(query_file_path, 'r') as query_file, open(ref_file_path, 'r') as ref_file, open(rst_file_path, 'w+') as rst_file:
@@ -376,22 +376,26 @@ def main(argv):
                     #print ref_line
 
                     alignment=sw.align(query_line,ref_line)
-                    x=alignment.match() #x[0] act x[1] rec
+                    x=alignment.match() #x[0] corresponding with ref_line, x[1] corresponding with query_line
 
                     print('****************************************************************')
 
                     #print_alignment_withSymbol(x[0],x[1],x[2],sys.stdout)
                     #print_alignment(x[0],x[1],sys.stdout)
-                    a=aligned_act_filtering(ref_line, x[0])
-                    b=aligned_rec_filtering(query_line, x[1])
-                    print_alignment(a,b,rst_file)
-                    bb=b.split()
-                    aa=a.split()
-                    x=wer(bb,aa)
-                    rst_file.write('\n\n\ntotal words: %d' % len(aa))
-                    rst_file.write('\nERRORS: %d' % x)
-                    rst_file.write('\nWER: %.4f\n' % (x/float(len(aa))))
-                    #return(len(aa),x,x/len(aa))
+
+                    # changed a and aa to be ref_line_filtered and ref_line_filtered_split
+                    # changed b and bb to be query_line_filtered and query_line_filtered_split
+                    # changed aligned_act_filtering name to aligned_ref_filtering
+                    # changed aligned_rec_filtering name to aligned_query_filtering
+                    ref_line_filtered=aligned_ref_filtering(ref_line, x[0])
+                    query_line_filtered=aligned_query_filtering(query_line, x[1])
+                    print_alignment(ref_line_filtered,query_line_filtered,rst_file)
+                    query_line_filtered_split=query_line_filtered.split()
+                    ref_line_filtered_split=ref_line_filtered.split()
+                    errors=wer(query_line_filtered_split,ref_line_filtered_split)
+                    rst_file.write('\n\n\ntotal words: %d' % len(ref_line_filtered_split))
+                    rst_file.write('\nERRORS: %d' % errors)
+                    rst_file.write('\nWER: %.4f\n' % (errors/float(len(ref_line_filtered_split))))
 
 
 

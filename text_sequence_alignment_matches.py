@@ -445,7 +445,7 @@ def substringsFinder(str1,str2,len_min=2):
     x=re.sub('^..? ','',x).strip() #filtering up to two length word from the beginning of the phrase, hoping more cut off words are handeled with this
 
 
-    #this line seems like it might be an issue later with the len_min
+    #this line seems like it might be an issue later with the len_min(maybe??)
     while len(x) >= len_min:
         substrings.append(x)
         #print(x)
@@ -473,7 +473,7 @@ def substringsFinder(str1,str2,len_min=2):
 
 
 # split based on spaces in the robot story alignment string
-def exact_phrase_matching(child_story,robot_story):
+def exact_phrase_matching(child_story,robot_story, min_len=3):
 
     #alignment
     match = 3
@@ -529,7 +529,7 @@ def exact_phrase_matching(child_story,robot_story):
         str1=child_align_split[i]
         str2=robot_align_split[i]
 
-        x=substringsFinder(str1,str2,3)
+        x=substringsFinder(str1,str2,min_len)
         #print(x)
         if len(x)!=0:
             phrase_matching_file.write('\nstr1: ')
@@ -556,7 +556,7 @@ def exact_phrase_matching(child_story,robot_story):
     return substring_matches
 
 #split based on spaces in the child story alignment string
-def similar_phrase_matching(child_story,robot_story):
+def similar_phrase_matching(child_story,robot_story, min_match_count=1):
 
     # alignment
     match = 3
@@ -653,7 +653,8 @@ def similar_phrase_matching(child_story,robot_story):
                         match_count+=1
 
             # increase/decrease number for more/less filtering
-            if match_count>1:
+            #currently need atleast 2 words matching, so 2 words is min length too
+            if match_count>min_match_count:
 
                 fuzzy_matches.append((str2_filtered_2, re.sub('  +', ' ', str1_filtered_2), len2, len1, match_count, fuzzy))
                 similar1=str2_filtered_2
@@ -776,7 +777,7 @@ def matches(child_story_files_directory):
         #phrase_matching_file.write('Child story: '+child_story+'\n')
 
         phrase_matching_file.write('\nEXACT PHRASE MATCHES:')
-        matches1 = exact_phrase_matching(child_story, robot_story)
+        matches1 = exact_phrase_matching(child_story, robot_story) #can add in a third parameter for min length if you want to change it, 3 by default
         for m in matches1:
             print(m)
             phrase_matching_file.write(m)
@@ -788,7 +789,7 @@ def matches(child_story_files_directory):
         print('***************************************')
 
         phrase_matching_file.write('\n\nSIMILAR PHRASE MATCHES:')
-        matches2 = similar_phrase_matching(child_story, robot_story)
+        matches2 = similar_phrase_matching(child_story, robot_story) #can add in a third parameter to specify the min number of word matches for each phrase match, 1 by default
         for m in matches2:
             print(m)
             phrase_matching_file.write(m[0] + ' || ' + m[1])
@@ -860,7 +861,6 @@ def main(argv):
 
     #code for alignment
     '''
-
     query_dir = ''     # text to be aligned (e.g., result from speech api)
     ref_dir = ''     # text to be aligned against (e.g., hand transcription)
     result_dir = 'result/'
@@ -948,8 +948,8 @@ def main(argv):
                     rst_file.write('\nWER: %.4f\n' % (x/float(len(aa))))
                     #return(len(aa),x,x/len(aa))
 
-    '''
 
+    '''
 
 if __name__ == "__main__":
    main(sys.argv[1:])

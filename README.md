@@ -1,21 +1,24 @@
 # wer
-For the text alignment:
-word error rate, child speech recognition evaluation
 
-for the text_sequence_alignment.py file, need transcripts, groundtruths, and a file with a list of groundtruth file names (filename.txt).
-(need these files to be in the same folder as the text_sequence_alignment.py file):
+Using text_sequence_alignment.py file for word error rate (for child speech recognition evaluation):
 
------
-Also, other things needed: numpy, re, difflib, swalign
-
-for swalign, I installed swalign via 'pip install swalign' in cmd line, then made changes to its' __init__.py file under C:\Python35\Lib\site-packages\swalign
-the __init__.py file I have is included in here
-
-
+	1. Make sure to have speech api results and the hand transcription .txt files
+	2. Directory for the speech api results (query_dir) and hand transcriptions (ref_dir) files needs to be set.
+	3. Each file the speech api results directory is filtered and processed as one big string.
+	4. Same for the files in the hand transcriptions directory.
+	5. Using swalign python, with modified changes to the __init__.py file. Modified file provided.
+	4. Swalign used to get the alignment.match() using the two strings as parameters (querys_line,ref_line).
+	5. Aligned_act_filtering and aligned_rec_filtering help with filtering the alignment results for wer use.
+	6. WER calculates the word error rate based on # of insertions, substitutions, deletions
+	   WER from https://martin-thoma.com/word-error-rate-calculation/
 
 ***********************************************
-For the phrase matches:
-1. Keep only the conditions sheet in Cyber4_Sheet.xlsx and saved changes as a Cyber4_Sheet_storyab.xlsx file.
-2. Make sure to have all the storytelling files in a seperate folder and change directory for it in the code's main function
-3. Havethe cyber4_robot_story_A.txt and cyber4_robot_story_B.txt files together with the text_sequence_alignment_matches.py file
-4. Results will be printed on the consel and matches.txt file
+
+Using text_sequence_alignment_matches for the phrase matches (exact and similar):
+
+  1. Keep only the conditions sheet in Cyber4_Sheet.xlsx and saved changes as a Cyber4_Sheet_storyab.xlsx file.
+  2. Make sure to have all the storytelling files in a seperate folder and change directory for it in the code's main function.
+  3. Have the cyber4_robot_story_A.txt and cyber4_robot_story_B.txt files together with the text_sequence_alignment_matches.py file.
+  4. Results will be printed on the consel and matches.txt file.
+  5. For exact matches, default number of words in a phrase is 3, 2 for similar matches.
+     Code for longestSubstringFinder from http://stackoverflow.com/questions/18715688/find-common-substring-between-two-strings

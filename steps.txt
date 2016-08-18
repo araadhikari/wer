@@ -1,0 +1,4 @@
+1. Keep only the conditions sheet in Cyber4_Sheet.xlsx and saved changes as a Cyber4_Sheet_storyab.xlsx file.
+2. Make sure to have all the storytelling files in a seperate folder and change directory for it in the code's main function
+3. Havethe cyber4_robot_story_A.txt and cyber4_robot_story_B.txt files together with the text_sequence_alignment_matches.py file
+4. Results will be printed on the consel and matches.txt file
